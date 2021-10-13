@@ -1,0 +1,44 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: bert4coauthorrec-dataset-n10
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      priorityClassName: research-high
+      containers:
+        - name: bert4coauthorrec-dataset-n10
+          image: ls6-staff-registry.informatik.uni-wuerzburg.de/koopmann/bert4coauthorrec-dataset:latest
+          resources:
+            limits:
+              cpu: "10"
+              nvidia.com/gpu: "1"
+              memory: "150Gi"
+            requests:
+              cpu: "10"
+              nvidia.com/gpu: "1"
+              memory: "150Gi"
+          imagePullPolicy: "Always"
+          volumeMounts:
+            - mountPath: "/workspace/data"
+              name: home
+          env:
+            - name: HOME
+              value: "/workspace/"
+          command: ["/bin/bash",  "-c", "python3 -u create_dataset.py"]
+      restartPolicy: Never
+      imagePullSecrets:
+        - name: ls6-staff-registry
+      volumes:
+        - name: home
+          cephfs:
+            monitors:
+              - 132.187.14.16
+              - 132.187.14.17
+              - 132.187.14.19
+              - 132.187.14.20
+            user: koopmann
+            path: "/home/ls6/koopmann/code-2020-bert4coauthorrec/data/"
+            secretRef:
+              name: ceph-secret
