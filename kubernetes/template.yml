@@ -1,0 +1,53 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cobert-{{}}
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: NotIn
+                    values:
+                      - ancalagon
+      priorityClassName: research-low
+      containers:
+        - name: cobert-{{}}
+          image: ls6-staff-registry.informatik.uni-wuerzburg.de/koopmann/bert4coauthorrec:latest
+          resources:
+            limits:
+              cpu: "2"
+              nvidia.com/gpu: "1"
+              memory: "16Gi"
+            requests:
+              cpu: "2"
+              nvidia.com/gpu: "1"
+              memory: "16Gi"
+          imagePullPolicy: "Always"
+          volumeMounts:
+            - mountPath: "/workspace/data"
+              name: home
+          env:
+            - name: HOME
+              value: "/workspace/"
+          command: ["/bin/bash",  "-c", "python3 -u run.py [[]]"]
+      restartPolicy: Never
+      imagePullSecrets:
+        - name: ls6-staff-registry
+      volumes:
+        - name: home
+          cephfs:
+            monitors:
+              - 132.187.14.16
+              - 132.187.14.17
+              - 132.187.14.19
+              - 132.187.14.20
+            user: koopmann
+            path: "/home/ls6/koopmann/code-2020-bert4coauthorrec/data/"
+            secretRef:
+              name: ceph-secret

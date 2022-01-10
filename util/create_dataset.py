@@ -11,12 +11,12 @@ from functools import partial
 from util.PaperEmbeddings import calculate_embeddings, init
 
 
-def create_dataset(papers_path_old: str, papers_path: str, data_dir: str = "./data/", dataset: str = "medline",
+def create_dataset(papers_path_old: str, paper_embedding_path: str, data_dir: str = "./data/", dataset: str = "medline",
                    min_co_authors: int = 5, embedding_dim: int = 768, n_negative_samples: int = 100):
     print("Creating Embeddings. ")
-    parse_as_list(papers_path_old, papers_path)
+    parse_as_list(papers_path_old, paper_embedding_path)
     print("Load file. ")
-    papers = load_data_file(papers_path, saved_as_list=False)
+    papers = load_data_file(paper_embedding_path, saved_as_list=False)
     save_to = os.path.join(data_dir, f"files-n{min_co_authors}-{dataset}")
     if not os.path.exists(save_to):
         os.makedirs(save_to)
@@ -55,6 +55,7 @@ def create_dataset(papers_path_old: str, papers_path: str, data_dir: str = "./da
 
 def parse_as_list(old_path: str, new_path: str) -> None:
     """
+    Creating Paper embeddings.
     :param old_path:
     :param new_path:
     :return:
@@ -75,11 +76,6 @@ def parse_as_list(old_path: str, new_path: str) -> None:
             embeddings = calculate_embeddings(tok, mod, dev, abstracts).astype(float)
             for curr_dict, embedding in zip(batch, embeddings):
                 curr_dict['abstract_embedding'] = list(embedding)
-                tmp = []
-                for author in curr_dict['authors']:
-                    tmp.append(author['name'] + " " + ' '.join([str(x) for x in author['ids']]))
-                curr_dict['author'] = tmp
-                del curr_dict['authors']
                 json.dump(curr_dict, f)
                 f.write("\n")
             pbar.update(1)
@@ -89,7 +85,7 @@ def parse_as_list(old_path: str, new_path: str) -> None:
 def load_data_file(file_path: str, saved_as_list: bool = True) -> list:
     """
     :param file_path:
-    :param saved_as_list
+    :param saved_as_list:
     :return:
     """
     print("load papers file")
@@ -292,6 +288,6 @@ def get_author_embedding(papers, valid_authors, embedding_dim):
 
 
 if __name__ == "__main__":
-    create_dataset(papers_path_old="./data/medline.json",
-                   papers_path="./data/papers-fixed-embedding-768-medline.json",
-                   min_co_authors=10)
+    create_dataset(papers_path_old="./data/ai_dataset_test.json",
+                   paper_embedding_path="./data/papers-fixed-embedding-768-ai-test.json",
+                   dataset="ai-test", min_co_authors=5)

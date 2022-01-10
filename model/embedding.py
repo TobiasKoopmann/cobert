@@ -107,3 +107,19 @@ class BertEmbeddingAEPESeq(torch.nn.Module):
         paper_emb += self.segment(segment_ids)
 
         return self.dropout(paper_emb)
+
+
+class BertEmbeddingNova(torch.nn.Module):
+    """ NovaBert Embeddings """
+    def __init__(self, vocab_size, n_papers, embed_size, max_len, dropout=0.1):  # n_papers
+        super().__init__()
+        self.token = torch.nn.Embedding(vocab_size, embed_size, padding_idx=0)
+        self.position = torch.nn.Embedding(max_len, embed_size, padding_idx=0)
+        self.paper = torch.nn.Embedding(n_papers, embed_size, padding_idx=0)
+        self.dropout = torch.nn.Dropout(p=dropout)
+        self.embed_size = embed_size
+
+    def forward(self, sequence, position_ids, paper_ids):
+        x = self.token(sequence)
+        y = self.position(position_ids) + self.paper(paper_ids)
+        return self.dropout(x), self.dropout(y)

@@ -82,33 +82,33 @@ def get_eval_dict(file_path: str = "data/runs/results.json",
             if verbose:
                 print("Having ", len(curr), "models. Baselines are ", curr_best_models.items())
             # other models
-            for model_type in ["og_model", "bucket_embedding", "paper_embedding", "pretrained_author_embedding",
-                               "paper_author_embedding", "weighted_embedding", "seq_model"]:
-                if model_type == "seq_model":
+            for model_type in ["og-model", "bucket_embedding", "paper_embedding", "pretrained_author_embedding",
+                               "paper_author_embedding", "weighted_embedding", "seq-model"]:
+                if model_type == "seq-model":
                     current = sorted([x for x in curr if model_type in x and x[model_type]],
                                      key=lambda x: x[sort_key][0][1], reverse=True)
                 elif model_type == "weighted_embedding":
-                    current = sorted([x for x in curr if model_type in x and x[model_type] and not x["seq_model"]],
+                    current = sorted([x for x in curr if model_type in x and x[model_type] and not x["seq-model"]],
                                      key=lambda x: x[sort_key][0][1], reverse=True)
                 elif model_type == "paper_author_embedding":
-                    current = sorted([x for x in curr if "og_model" in x and x["pretrained_author_embedding"] and
-                                      x["paper_embedding"] and not x["seq_model"] and not x["weighted_embedding"]],
+                    current = sorted([x for x in curr if "og-model" in x and x["pretrained_author_embedding"] and
+                                      x["paper_embedding"] and not x["seq-model"] and not x["weighted_embedding"]],
                                      key=lambda x: x[sort_key][0][1], reverse=True)
                 elif model_type == "pretrained_author_embedding":
-                    current = sorted([x for x in curr if "og_model" in x and x["pretrained_author_embedding"]
-                                      and not x["paper_embedding"] and not x["seq_model"]
+                    current = sorted([x for x in curr if "og-model" in x and x["pretrained_author_embedding"]
+                                      and not x["paper_embedding"] and not x["seq-model"]
                                       and not x["weighted_embedding"]],
                                      key=lambda x: x[sort_key][0][1], reverse=True)
                 elif model_type == "paper_embedding":
-                    current = sorted([x for x in curr if "og_model" in x and x["paper_embedding"]
-                                      and not x["pretrained_author_embedding"] and not x["seq_model"]
+                    current = sorted([x for x in curr if "og-model" in x and x["paper_embedding"]
+                                      and not x["pretrained_author_embedding"] and not x["seq-model"]
                                       and not x["weighted_embedding"]],
                                      key=lambda x: x[sort_key][0][1], reverse=True)
                 elif model_type == "bucket_embedding":
                     current = sorted([x for x in curr if model_type in x and x[model_type]],
                                      key=lambda x: x[sort_key][0][1], reverse=True)
                 else:  # orig
-                    current = sorted([x for x in curr if model_type in x and x[model_type] and not x["seq_model"]
+                    current = sorted([x for x in curr if model_type in x and x[model_type] and not x["seq-model"]
                                       and not x["weighted_embedding"]], key=lambda x: x[sort_key][0][1], reverse=True)
                 if verbose:
                     print(model_type.replace("_", " ").title() + " " + str(len(current)))
@@ -134,10 +134,10 @@ def print_main_table(eval_dict: dict) -> None:
             curr.update({x[0]: [results['majority'][x[1]][x[2]][1],
                                 results['author_majority'][x[1]][x[2]][1],
                                 results['graph'][x[1]][x[2]][1],
-                                results['og_model'][x[1]][x[2]][1],
+                                results['og-model'][x[1]][x[2]][1],
                                 results['paper_author_embedding'][x[1]][x[2]][1],
                                 results['weighted_embedding'][x[1]][x[2]][1],
-                                results['seq_model'][x[1]][x[2]][1] if 'seq_model' in results else "---"] for x in
+                                results['seq-model'][x[1]][x[2]][1] if 'seq-model' in results else "---"] for x in
                          [["Acc.", "hit", 0], ["Hit@5", "hit", 1], ["Hit@10", "hit", 2], ["NDCG@5", "ndcg", 1],
                           ["NDCG@10", "ndcg", 2]]})
             df = pd.DataFrame(curr)
@@ -194,7 +194,7 @@ if __name__ == '__main__':
         for data in ["data/files-n5", "data/files-n10", "data/files-n5-medline", "data/files-n10-medline"]:
             for task in ["ranking", "predict"]:
                 print_ablation_study(eval_dict=eval_dict, dataset=data, task=task,
-                                     models=["og_model", "bucket_embedding", "pretrained_author_embedding",
+                                     models=["og-model", "bucket_embedding", "pretrained_author_embedding",
                                              "paper_embedding", "paper_author_embedding"])
     if analyse_weights:
         print("Weights: Token, Author, Position")

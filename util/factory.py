@@ -15,38 +15,41 @@ from model.bert import *
 from model.dataset import *
 
 
-def get_model(args):
-    config = args.data_dir, args.hidden_size, args.n_layers, args.n_heads, args.max_len, args.dropout
-    if args.og_model:
+def get_model(args: dict):
+    config = args["data_dir"], args["hidden_size"], args["n_layers"], args["n_heads"], args["max_len"], args["dropout"]
+    if "og-model" in args:
         logging.info("load og model")
         model = get_og_model(*config)
-        assert not args.paper_embedding and not args.pretrained_paper_embedding, "OG model cannot use paper embedding"
-    elif args.seq_model:
+        assert "paper_embedding" not in args and "pretrained_paper_embedding" not in args, "OG model cannot use paper embedding"
+    elif "nova-model" in args:
+        logging.info("load nova model")
+        model = get_nova_model(*config)
+    elif "seq-model" in args:
         logging.info("load sequential model")
         model = get_seq_model(*config)
-    elif not (args.paper_embedding or args.pretrained_paper_embedding) and not args.weighted_embedding:
+    elif not ("paper_embedding" in args or "pretrained_paper_embedding" in args) and not "weighted_embedding" in args:
         logging.info("load reformed model with untrained author embedding")
         model = get_ae_model(*config)
-    elif not (args.paper_embedding or args.pretrained_paper_embedding) and args.weighted_embedding:
+    elif not ("paper_embedding" in args or "pretrained_paper_embedding" in args) and "weighted_embedding" in args:
         logging.info("load reformed model with untrained weighted author embedding")
         model = get_aew_model(*config)
-    elif (args.paper_embedding or args.pretrained_paper_embedding) and not args.weighted_embedding:
+    elif ("paper_embedding" in args or "pretrained_paper_embedding" in args) and "weighted_embedding" not in args:
         logging.info("load reformed model with untrained author and paper embedding")
         model = get_aepe_model(*config)
-    elif (args.paper_embedding or args.pretrained_paper_embedding) and args.weighted_embedding:
+    elif ("paper_embedding" in args or "pretrained_paper_embedding" in args) and "weighted_embedding" in args:
         logging.info("load reformed model with untrained weighted author and paper embedding")
         model = get_aepew_model(*config)
     else:
         raise ValueError("Invalid configuration")
 
-    if args.pretrained_author_embedding:
+    if "pretrained_author_embedding" in args:
         logging.info("load pretrained author embedding")
-        authors_emb_file = _get_authors_emb_file(args.data_dir)
+        authors_emb_file = _get_authors_emb_file(args["data_dir"])
         model.embedding.token.load_state_dict(authors_emb_file)
 
-    if args.pretrained_paper_embedding:
+    if "pretrained_paper_embedding" in args:
         logging.info("load pretrained paper embedding")
-        papers_emb_file = _get_papers_emb_file(args.data_dir)
+        papers_emb_file = _get_papers_emb_file(args["data_dir"])
         model.embedding.paper.load_state_dict(papers_emb_file)
 
     return model
@@ -166,6 +169,27 @@ def get_seq_model(data_dir: str,
     return model
 
 
+def get_nova_model(data_dir: str,
+                   hidden_size: int = 768,
+                   n_layers: int = 2,
+                   n_heads: int = 8,
+                   max_len: int = 200,
+                   dropout: float = 0.1):
+
+    authors = _get_authors_file(data_dir)
+    papers = _get_papers_emb_file(data_dir)
+
+    model = Bert4RecNova(vocab_size=len(authors) + 2,  # +2 for padding and mask
+                         n_papers=papers["weight"].shape[0],
+                         hidden_size=hidden_size,
+                         n_layers=n_layers,
+                         n_heads=n_heads,
+                         max_len=max_len + 1,  # +1 for padding
+                         p_dropout=dropout)
+
+    return model
+
+
 def get_data_loaders(data_dir: str,
                      task: Bert4RecTask = Bert4RecTask.RANKING,
                      sequential: bool = False,
@@ -234,6 +258,7 @@ def get_data_loaders(data_dir: str,
 
 
 def get_evaluator(data_dir: str,
+                  use_negative_sampling: bool,
                   ks: Iterable[int] = (1, 5, 10),
                   ignore_index: int = -100):
     data_dir = os.path.abspath(data_dir)
@@ -242,7 +267,7 @@ def get_evaluator(data_dir: str,
 
     with open(n_samples_file, "r") as file:
         negative_samples = json.load(file)
-    return Evaluation(negative_samples, ks=ks, ignore_index=ignore_index)
+    return Evaluation(negative_samples, use_negative_sampling=use_negative_sampling, ks=ks, ignore_index=ignore_index)
 
 
 def get_serializer(ignore_index: int = -100, file_name: str = None):
