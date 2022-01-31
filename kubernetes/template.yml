@@ -15,10 +15,10 @@ spec:
                     operator: NotIn
                     values:
                       - ancalagon
-      priorityClassName: research-low
+      priorityClassName: research-med
       containers:
         - name: cobert-{{}}
-          image: ls6-staff-registry.informatik.uni-wuerzburg.de/koopmann/bert4coauthorrec:latest
+          image: ls6-staff-registry.informatik.uni-wuerzburg.de/koopmann/cobert:latest
           resources:
             limits:
               cpu: "2"

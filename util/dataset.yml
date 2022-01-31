@@ -1,22 +1,22 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: bert4coauthorrec-dataset-n10
+  name: cobert-dataset
 spec:
   backoffLimit: 0
   template:
     spec:
-      priorityClassName: research-high
+      priorityClassName: research-med
       containers:
-        - name: bert4coauthorrec-dataset-n10
-          image: ls6-staff-registry.informatik.uni-wuerzburg.de/koopmann/bert4coauthorrec-dataset:latest
+        - name: cobert-dataset-n5
+          image: ls6-staff-registry.informatik.uni-wuerzburg.de/koopmann/cobert-dataset:latest
           resources:
             limits:
-              cpu: "10"
+              cpu: "2"
               nvidia.com/gpu: "1"
               memory: "150Gi"
             requests:
-              cpu: "10"
+              cpu: "2"
               nvidia.com/gpu: "1"
               memory: "150Gi"
           imagePullPolicy: "Always"
@@ -26,7 +26,7 @@ spec:
           env:
             - name: HOME
               value: "/workspace/"
-          command: ["/bin/bash",  "-c", "python3 -u create_dataset.py"]
+          command: ["/bin/bash",  "-c", "python3 -u create_temporal_dataset.py"]
       restartPolicy: Never
       imagePullSecrets:
         - name: ls6-staff-registry

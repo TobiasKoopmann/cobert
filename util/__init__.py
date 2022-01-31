@@ -6,8 +6,8 @@ from .training import *
 
 
 class Bert4RecTask(str, enum.Enum):
-    RANKING = "ranking"
-    PREDICT = "predict"
+    NEW = "new"
+    EXISTING = "existing"
 
     def __str__(self):
         return self.value

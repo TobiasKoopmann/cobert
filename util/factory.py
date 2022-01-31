@@ -191,7 +191,7 @@ def get_nova_model(data_dir: str,
 
 
 def get_data_loaders(data_dir: str,
-                     task: Bert4RecTask = Bert4RecTask.RANKING,
+                     task: Bert4RecTask = Bert4RecTask.EXISTING,
                      sequential: bool = False,
                      bucket: bool = False,
                      batch_size: int = 200,
@@ -204,16 +204,9 @@ def get_data_loaders(data_dir: str,
                      num_workers: int = 1) -> [DataLoader, DataLoader, DataLoader]:
     data_train, data_val, data_test = _load_data_files(data_dir, task)
 
-    if task == Bert4RecTask.RANKING:
-        train_dataset, val_dataset, test_dataset = Bert4RecDatasetTrainRanking, \
-                                                   Bert4RecDatasetValidateRanking, \
-                                                   Bert4RecDatasetTestRanking
-    elif task == Bert4RecTask.PREDICT:
-        train_dataset, val_dataset, test_dataset = Bert4RecDatasetTrainPredict, \
-                                                   Bert4RecDatasetValidatePredict, \
-                                                   Bert4RecDatasetTestPredict
-    else:
-        raise KeyError(f"Invalid task '{task}' specified (use enum Bert4RecTask)")
+    train_dataset, val_dataset, test_dataset = Bert4RecDatasetTrain, \
+                                               Bert4RecDatasetValidate, \
+                                               Bert4RecDatasetTest
 
     dataset_train = train_dataset(data_train,
                                   max_len=max_len,
@@ -257,19 +250,6 @@ def get_data_loaders(data_dir: str,
     return dataloader_train, dataloader_validate, dataloader_test
 
 
-def get_evaluator(data_dir: str,
-                  use_negative_sampling: bool,
-                  ks: Iterable[int] = (1, 5, 10),
-                  ignore_index: int = -100):
-    data_dir = os.path.abspath(data_dir)
-    n_samples_file = os.path.join(data_dir, "negative-samples.json")
-    assert os.path.exists(n_samples_file), f"negative samples file '{n_samples_file}' does not exist"
-
-    with open(n_samples_file, "r") as file:
-        negative_samples = json.load(file)
-    return Evaluation(negative_samples, use_negative_sampling=use_negative_sampling, ks=ks, ignore_index=ignore_index)
-
-
 def get_serializer(ignore_index: int = -100, file_name: str = None):
     return PredictionSerializer(ignore_index=ignore_index, file_name=file_name)
 
@@ -299,30 +279,28 @@ def _get_papers_emb_file(data_dir: str):
     return torch.load(papers_file)
 
 
-def _load_data_files(data_dir: str,
-                     task: Bert4RecTask) -> [list, list, list]:
+def _load_data_files(data_dir: str, task: Bert4RecTask) -> [list, list, list]:
+    # todo put this into the dataset for sequential loading
     data_dir = os.path.abspath(data_dir)
-    if task == Bert4RecTask.RANKING:
-        data_file = os.path.join(data_dir, "ranking-dataset.json")
-        assert os.path.exists(data_file), f"dataset file '{data_file}' does not exist"
-
-        with open(data_file, "r") as file:
-            data_train = data_val = data_test = json.load(file)
-    elif task == Bert4RecTask.PREDICT:
-        train_file = os.path.join(data_dir, "predict-dataset-train.json")
-        val_file = os.path.join(data_dir, "predict-dataset-validate.json")
-        test_file = os.path.join(data_dir, "predict-dataset-test.json")
-        assert os.path.exists(train_file), f"dataset file '{train_file}' does not exist"
-        assert os.path.exists(val_file), f"dataset file '{val_file}' does not exist"
-        assert os.path.exists(test_file), f"dataset file '{test_file}' does not exist"
-
-        with open(train_file, "r") as file:
-            data_train = json.load(file)
-        with open(val_file, "r") as file:
-            data_val = json.load(file)
-        with open(test_file, "r") as file:
-            data_test = json.load(file)
+    if task == Bert4RecTask.NEW:
+        train_file = os.path.join(data_dir, "train_dataset.json")
+        val_file = os.path.join(data_dir, "new_val_dataset.json")
+        test_file = os.path.join(data_dir, "new_test_dataset.json")
+    elif task == Bert4RecTask.EXISTING:
+        train_file = os.path.join(data_dir, "train_dataset.json")
+        val_file = os.path.join(data_dir, "existing_val_dataset.json")
+        test_file = os.path.join(data_dir, "existing_test_dataset.json")
     else:
         raise KeyError("Invalid task specified (use enum Bert4RecTask)")
+    assert os.path.exists(train_file), f"dataset file '{train_file}' does not exist"
+    assert os.path.exists(val_file), f"dataset file '{val_file}' does not exist"
+    assert os.path.exists(test_file), f"dataset file '{test_file}' does not exist"
+
+    with open(train_file, "r") as file:
+        data_train = [json.loads(x) for x in file]
+    with open(val_file, "r") as file:
+        data_val = [json.loads(x) for x in file]
+    with open(test_file, "r") as file:
+        data_test = [json.loads(x) for x in file]
 
     return data_train, data_val, data_test

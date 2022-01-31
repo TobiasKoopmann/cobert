@@ -203,7 +203,7 @@ class Bert4RecDataset(torch.utils.data.dataset.Dataset, ABC):
         }
 
 
-class Bert4RecDatasetTrainRanking(Bert4RecDataset):
+class Bert4RecDatasetTrain(Bert4RecDataset):
     def __init__(self,
                  data: List[dict],
                  p_mlm: float = 0.2,
@@ -255,7 +255,7 @@ class Bert4RecDatasetTrainRanking(Bert4RecDataset):
         return x, y
 
 
-class Bert4RecDatasetValidateRanking(Bert4RecDataset):
+class Bert4RecDatasetValidate(Bert4RecDataset):
     def __init__(self,
                  data: List[dict],
                  **kwargs):
@@ -270,7 +270,7 @@ class Bert4RecDatasetValidateRanking(Bert4RecDataset):
         return a, p, y
 
 
-class Bert4RecDatasetTestRanking(Bert4RecDataset):
+class Bert4RecDatasetTest(Bert4RecDataset):
     def __init__(self,
                  data: List[dict],
                  **kwargs):
@@ -283,63 +283,3 @@ class Bert4RecDatasetTestRanking(Bert4RecDataset):
         p = datapoint["paper_ids"]
 
         return a, p, y
-
-
-class Bert4RecDatasetTrainPredict(Bert4RecDatasetTrainRanking):
-    def __init__(self,
-                 data: List[dict],
-                 p_mlm: float = 0.2,
-                 p_force_last: float = 0.05,
-                 p_mask_max: float = 0.4,
-                 **kwargs):
-        super().__init__(data, **kwargs)
-        self.p_mlm = p_mlm
-        self.p_force_last = p_force_last
-        self.p_mask_max = p_mask_max
-
-    def _process_datapoint(self, datapoint):
-        a = datapoint["co_authors"][-self.max_len:]
-        y = [self.ignore_index] * len(a)
-        a, y = self._mask_sequence(a, y)
-        p = datapoint["paper_ids"][-self.max_len:]
-
-        return a, p, y
-
-
-class Bert4RecDatasetValidatePredict(Bert4RecDataset):
-    def __init__(self,
-                 data: List[dict],
-                 **kwargs):
-        super().__init__(data, **kwargs)
-
-    def _process_datapoint(self, datapoint):
-        a = datapoint["co_authors"]
-        y = [self.ignore_index] * len(a)
-        p = datapoint["paper_ids"]
-
-        for i in datapoint["masked_ids"]:
-            y[i] = a[i]
-            a[i] = self.mask_id
-
-        return a, p, y
-
-
-# functionality is equal to validation, just to have test dataset class separately as for ranking
-class Bert4RecDatasetTestPredict(Bert4RecDatasetValidatePredict):
-    pass
-
-
-if __name__ == "__main__":
-    import json
-
-    with open("../data/files-n10/ranking-dataset.json", "r") as file:
-        data = json.load(file)
-    for property in [True, False]:
-        dataset = Bert4RecDatasetTrainRanking(data, pad_id=len(data), mask_id=len(data) + 1)
-        dataloader = torch.utils.data.DataLoader(dataset, batch_size=2, collate_fn=partial(dataset.collate,
-                                                                                           bucket_embedding=True))
-
-        for x in dataloader:
-            print(x['position_ids'])
-            break
-

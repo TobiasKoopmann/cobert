@@ -14,11 +14,9 @@ class Callback(abc.ABC):
 
 
 class Evaluation(Callback):
-    def __init__(self, negative_samples, use_negative_sampling=False, ks=(1, 5, 10), ignore_index: int = -100):
+    def __init__(self, ks=(1, 5, 10), ignore_index: int = -100):
         super().__init__()
         self.ks = ks
-        self.use_negative_sampling = use_negative_sampling
-        self.negative_samples = {int(k): v for k, v in negative_samples.items()}
         self.ignore_index = ignore_index
         self.evaluation = None
         self.reset()
@@ -29,12 +27,8 @@ class Evaluation(Callback):
                 if labels[i, j] == self.ignore_index:  # [ignore, ignore, ..., mask]
                     continue
                 candidate = labels[i, j].item()  # integer
-                if self.use_negative_sampling:
-                    samples = self.negative_samples[candidate] + [candidate]
-                    sample_predictions = predictions[i, j][samples].tolist()
-                else:
-                    sample_predictions = predictions[i, j].tolist()
-                    samples = np.arange(len(sample_predictions))
+                sample_predictions = predictions[i, j].tolist()
+                samples = np.arange(len(sample_predictions))
                 ranked_samples = list(
                     sorted(zip(samples, sample_predictions), key=lambda x: x[1], reverse=True))  # list of id, logit
                 self.evaluation["n"] += 1

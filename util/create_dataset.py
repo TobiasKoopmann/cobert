@@ -14,7 +14,7 @@ from util.PaperEmbeddings import calculate_embeddings, init
 def create_dataset(papers_path_old: str, paper_embedding_path: str, data_dir: str = "./data/", dataset: str = "medline",
                    min_co_authors: int = 5, embedding_dim: int = 768, n_negative_samples: int = 100):
     print("Creating Embeddings. ")
-    parse_as_list(papers_path_old, paper_embedding_path)
+    create_paper_embedding(papers_path_old, paper_embedding_path)
     print("Load file. ")
     papers = load_data_file(paper_embedding_path, saved_as_list=False)
     save_to = os.path.join(data_dir, f"files-n{min_co_authors}-{dataset}")
@@ -53,7 +53,7 @@ def create_dataset(papers_path_old: str, paper_embedding_path: str, data_dir: st
     torch.save(author_embedding.state_dict(), os.path.join(save_to, f"author-embedding.pt"))
 
 
-def parse_as_list(old_path: str, new_path: str) -> None:
+def create_paper_embedding(old_path: str, new_path: str) -> None:
     """
     Creating Paper embeddings.
     :param old_path:
@@ -110,7 +110,6 @@ def filter_authors(papers: list, min_co_authors: int) -> (dict, dict):
     :param min_co_authors:
     :return: dict: {author: [papers]}, dict: {author: id}
     """
-    print("filter valid authors")
     papers_by_author = defaultdict(list)
 
     for paper in papers:

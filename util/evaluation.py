@@ -61,7 +61,7 @@ def get_eval_dict(file_path: str = "data/runs/results.json",
     eval_dict = {}
     for data_dir in data_dirs:
         eval_dict[data_dir] = {}
-        for task in ["ranking", "predict"]:
+        for task in ["new", "existing"]:
             if verbose:
                print("-" * 30 + data_dir + " " + task + "-" * 30)
             curr_best_models = {}
@@ -192,7 +192,7 @@ if __name__ == '__main__':
         print_main_table(eval_dict=eval_dict)
     if print_ablation:
         for data in ["data/files-n5", "data/files-n10", "data/files-n5-medline", "data/files-n10-medline"]:
-            for task in ["ranking", "predict"]:
+            for task in ["existing", "new"]:
                 print_ablation_study(eval_dict=eval_dict, dataset=data, task=task,
                                      models=["og-model", "bucket_embedding", "pretrained_author_embedding",
                                              "paper_embedding", "paper_author_embedding"])

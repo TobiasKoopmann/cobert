@@ -5,6 +5,7 @@ from util.training import *
 
 
 def objective(trial):
+    # tmp_config.json
     args = json.load(open("tmp.json", 'r'))
     args["learning_rate"] = trial.suggest_float("learning_rate", 1e-5, 0.5)
     args["n_early_stop"] = trial.suggest_int("n_early_stop", 1, 10)
@@ -16,6 +17,11 @@ def objective(trial):
     args["p_mlm"] = trial.suggest_float("p_mlm", 1e-2, 0.5)
     args["p_force_last"] = trial.suggest_float("p_force_last", 1e-2, 0.5)
     args["p_mask_max"] = trial.suggest_float("p_mask_max", 1e-2, 0.5)
+
+    if args["verbose"]:
+        print("Config:")
+        for k, v in args.items():
+            print(k, ":", v)
 
     log_handlers = [logging.StreamHandler()]
     log_file = os.path.join(args["run_dir"], "run.logs")
@@ -32,10 +38,6 @@ def objective(trial):
     if not os.path.exists(args["run_dir"]):
         os.makedirs(args["run_dir"])
     json.dump(args, open(os.path.join(args["run_dir"], "config.json"), 'w', encoding='utf-8'))
-    if args["verbose"]:
-        print("Config:")
-        for k, v in args.items():
-            print(k, ":", v)
     return main(args=args)
 
 
@@ -62,7 +64,7 @@ def main(args: dict) -> float:
         optimizer = torch.optim.AdamW(model.parameters(), lr=args["learning_rate"], weight_decay=args["weight_decay"])
     else:
         optimizer = torch.optim.Adam(model.parameters(), lr=args["learning_rate"])
-    evaluation = get_evaluator(args["data_dir"], args["use_negative_sampling"], ks=args["ks"], ignore_index=ignore_index)
+    evaluation = Evaluation(ks=args["ks"], ignore_index=ignore_index)
     callbacks = [evaluation]
 
     # min_loss = float("inf")
@@ -122,4 +124,4 @@ def main(args: dict) -> float:
 
 if __name__ == '__main__':
     study = optuna.create_study(direction='minimize')
-    study.optimize(objective, n_trials=100)
+    study.optimize(objective, n_trials=2)
