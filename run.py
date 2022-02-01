@@ -1,3 +1,4 @@
+import uuid
 import optuna
 
 from util.factory import *
@@ -7,6 +8,10 @@ from util.training import *
 def objective(trial):
     # tmp_config.json
     args = json.load(open("tmp.json", 'r'))
+    curr_id = str(uuid.uuid4())
+    args["id"] = curr_id
+    args["run_dir"] = f"data/journal_runs/{curr_id}/"
+    args["save_predictions_file"] = f"data/journal_runs/{curr_id}/predictions"
     args["learning_rate"] = trial.suggest_float("learning_rate", 1e-5, 0.5)
     args["n_early_stop"] = trial.suggest_int("n_early_stop", 1, 10)
     args["hidden_size"] = 768
@@ -123,5 +128,10 @@ def main(args: dict) -> float:
 
 
 if __name__ == '__main__':
-    study = optuna.create_study(direction='minimize')
-    study.optimize(objective, n_trials=2)
+    args = json.load(open("tmp.json", 'r'))
+    print("Args are:")
+    for k, v in args.items():
+        print(f"\t{k} \t- {v}")
+    study = optuna.create_study(direction='minimize', study_name=args['study_name'],
+                                storage=f'sqlite:///{args["db_path"]}', load_if_exists=True)
+    study.optimize(objective, n_trials=10)

@@ -28,16 +28,16 @@ def get_model(args: dict):
         logging.info("load sequential model")
         model = get_seq_model(*config)
     elif not ("paper_embedding" in args or "pretrained_paper_embedding" in args) and not "weighted_embedding" in args:
-        logging.info("load reformed model with untrained author embedding")
+        logging.info("load ae")
         model = get_ae_model(*config)
     elif not ("paper_embedding" in args or "pretrained_paper_embedding" in args) and "weighted_embedding" in args:
-        logging.info("load reformed model with untrained weighted author embedding")
+        logging.info("load awe model")
         model = get_aew_model(*config)
     elif ("paper_embedding" in args or "pretrained_paper_embedding" in args) and "weighted_embedding" not in args:
-        logging.info("load reformed model with untrained author and paper embedding")
+        logging.info("load cobert")
         model = get_aepe_model(*config)
     elif ("paper_embedding" in args or "pretrained_paper_embedding" in args) and "weighted_embedding" in args:
-        logging.info("load reformed model with untrained weighted author and paper embedding")
+        logging.info("load ae pe weighted")
         model = get_aepew_model(*config)
     else:
         raise ValueError("Invalid configuration")

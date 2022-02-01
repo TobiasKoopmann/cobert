@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: cobert-{{}}
+  name: cobert-{{}}-[[]]
 spec:
   backoffLimit: 0
   template:
@@ -18,7 +18,7 @@ spec:
       priorityClassName: research-med
       containers:
         - name: cobert-{{}}
-          image: ls6-staff-registry.informatik.uni-wuerzburg.de/koopmann/cobert:latest
+          image: ls6-staff-registry.informatik.uni-wuerzburg.de/koopmann/cobert-{{}}:latest
           resources:
             limits:
               cpu: "2"
@@ -35,7 +35,7 @@ spec:
           env:
             - name: HOME
               value: "/workspace/"
-          command: ["/bin/bash",  "-c", "python3 -u run.py [[]]"]
+          command: ["/bin/bash",  "-c", "python3 -u run.py"]
       restartPolicy: Never
       imagePullSecrets:
         - name: ls6-staff-registry
