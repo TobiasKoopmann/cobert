@@ -1,3 +1,4 @@
+import os.path
 from functools import partial
 from typing import List, Tuple, Optional, Dict
 import torch
@@ -216,11 +217,11 @@ class Bert4RecDatasetTrain(Bert4RecDataset):
         self.p_mask_max = p_mask_max
 
     def _process_datapoint(self, datapoint):
-        index = self._get_last_paper_index(datapoint["paper_ids"]) - 1
-        a = datapoint["co_authors"][:index][-self.max_len:]
+        # index = self._get_last_paper_index(datapoint["paper_ids"]) - 1
+        a = datapoint["co_authors"][-self.max_len:]
         y = [self.ignore_index] * len(a)
         a, y = self._mask_sequence(a, y)
-        p = datapoint["paper_ids"][:index][-self.max_len:]
+        p = datapoint["paper_ids"][-self.max_len:]
 
         return a, p, y
 
@@ -256,30 +257,36 @@ class Bert4RecDatasetTrain(Bert4RecDataset):
 
 
 class Bert4RecDatasetValidate(Bert4RecDataset):
-    def __init__(self,
-                 data: List[dict],
-                 **kwargs):
+    def __init__(self, data: List[dict], **kwargs):
         super().__init__(data, **kwargs)
 
     def _process_datapoint(self, datapoint):
-        index = self._get_last_paper_index(datapoint["paper_ids"])
-        a = datapoint["co_authors"][:index - 1] + [self.mask_id]
-        y = [self.ignore_index] * (index - 1) + [datapoint["co_authors"][index - 1]]
-        p = datapoint["paper_ids"][:index]
+        a = datapoint["co_authors"]
+        y = [self.ignore_index] * len(a)
+        p = datapoint["paper_ids"]
+        print(f"DEBUG: Masks: {datapoint['masked_ids']} - length: {len(a)}/{len(y)} for author {datapoint['author']}")
+        for mask_idx in datapoint['masked_ids']:
+            if mask_idx > len(a) or mask_idx > len(y):
+                print(f"Error: Idx: {mask_idx} - length: {len(a)}/{len(y)} for author {datapoint['author']}")
+            y[mask_idx] = a[mask_idx]
+            a[mask_idx] = self.mask_id
 
         return a, p, y
 
 
 class Bert4RecDatasetTest(Bert4RecDataset):
-    def __init__(self,
-                 data: List[dict],
-                 **kwargs):
+    def __init__(self, data: List[dict], **kwargs):
         super().__init__(data, **kwargs)
 
     def _process_datapoint(self, datapoint):
-        index = self._get_last_paper_index(datapoint["paper_ids"])
-        a = datapoint["co_authors"][:index] + [self.mask_id] * len(datapoint["co_authors"][index:])
-        y = [self.ignore_index] * index + datapoint["co_authors"][index:]
+        a = datapoint["co_authors"]
+        y = [self.ignore_index] * len(a)
         p = datapoint["paper_ids"]
+        print(f"DEBUG: Masks: {datapoint['masked_ids']} - length: {len(a)}/{len(y)} for author {datapoint['author']}")
+        for mask_idx in datapoint['masked_ids']:
+            if mask_idx > len(a) or mask_idx > len(y):
+                print(f"Error: Idx: {mask_idx} - length: {len(a)}/{len(y)} for author {datapoint['author']}")
+            y[mask_idx] = a[mask_idx]
+            a[mask_idx] = self.mask_id
 
         return a, p, y

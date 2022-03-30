@@ -44,8 +44,6 @@ class Bert4RecOG(nn.Module):
         self.projection_norm = nn.LayerNorm(self.hidden_size)
         self.out_bias = nn.Parameter(torch.zeros(self.vocab_size))
 
-        self.out = nn.Linear(self.hidden_size, self.vocab_size)
-
     def forward(self, batch):
         x = self.embedding(batch["author_ids"], batch["position_ids"])
 
@@ -159,7 +157,6 @@ class Bert4RecAEPE(nn.Module):
                               p_dropout=self.p_dropout)
              for _ in range(n_layers)]
         )
-
         self.out = nn.Linear(self.hidden_size, self.vocab_size)
 
     def forward(self, batch):
@@ -225,7 +222,6 @@ class Bert4RecAEPESeq(nn.Module):
                               p_dropout=self.p_dropout)
              for _ in range(n_layers)]
         )
-
         self.out = nn.Linear(self.hidden_size, self.vocab_size)
 
     def forward(self, batch):
@@ -233,7 +229,6 @@ class Bert4RecAEPESeq(nn.Module):
 
         for transformer in self.transformer_blocks:
             x = transformer.forward(x, batch["attention_mask"])
-
         return self.out(x)
 
 
@@ -272,7 +267,6 @@ class Bert4RecNova(nn.Module):
                                   p_dropout=self.p_dropout)
              for _ in range(n_layers)]
         )
-
         self.out = nn.Linear(self.hidden_size, self.vocab_size)
 
     def forward(self, batch):

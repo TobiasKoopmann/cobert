@@ -29,8 +29,7 @@ class Evaluation(Callback):
                 candidate = labels[i, j].item()  # integer
                 sample_predictions = predictions[i, j].tolist()
                 samples = np.arange(len(sample_predictions))
-                ranked_samples = list(
-                    sorted(zip(samples, sample_predictions), key=lambda x: x[1], reverse=True))  # list of id, logit
+                ranked_samples = list(sorted(zip(samples, sample_predictions), key=lambda x: x[1], reverse=True))  # list of id, logit
                 self.evaluation["n"] += 1
                 rank = 0
                 for index, sample in enumerate(ranked_samples):

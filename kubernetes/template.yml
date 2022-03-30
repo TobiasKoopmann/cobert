@@ -6,28 +6,23 @@ spec:
   backoffLimit: 0
   template:
     spec:
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: kubernetes.io/hostname
-                    operator: NotIn
-                    values:
-                      - ancalagon
       priorityClassName: research-med
       containers:
         - name: cobert-{{}}
           image: ls6-staff-registry.informatik.uni-wuerzburg.de/koopmann/cobert-{{}}:latest
+          ports:
+            - name: http
+              containerPort: 56789
+              protocol: TCP
           resources:
             limits:
               cpu: "2"
               nvidia.com/gpu: "1"
-              memory: "16Gi"
+              memory: "32Gi"
             requests:
               cpu: "2"
               nvidia.com/gpu: "1"
-              memory: "16Gi"
+              memory: "32Gi"
           imagePullPolicy: "Always"
           volumeMounts:
             - mountPath: "/workspace/data"
@@ -35,7 +30,22 @@ spec:
           env:
             - name: HOME
               value: "/workspace/"
-          command: ["/bin/bash",  "-c", "python3 -u run.py"]
+            - name: WANDB_API_KEY
+              value: 4b411151e2c8d95f44c26848c68c6831d2503af4
+#               valueFrom:
+#                 secretKeyRef:
+#                   name: wandb
+#                   key: key
+            - name: WANDB_NAME
+              value: cobert-{{}}-[[]]
+            - name: WANDB_PROJECT
+              value: COBERT
+#             - name: WANDB_TAGS
+#               value: "BART,darmstadt,half ds,post submission"
+#             - name: WANDB_BASE_URL
+#                 value: "http://wandb-service:8080"
+          command: ["/bin/bash",  "-c", "python3 -m debugpy --listen 0.0.0.0:4444 --wait-for-client -u run.py"]
+#           command: ["/bin/bash",  "-c", "systemctl ssh start && sleep 1000000"]
       restartPolicy: Never
       imagePullSecrets:
         - name: ls6-staff-registry

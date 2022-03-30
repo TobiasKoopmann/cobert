@@ -1,13 +1,18 @@
 import uuid
 import optuna
+import pydevd_pycharm
 
 from util.factory import *
 from util.training import *
 
+import wandb
+
+# tmp_config.json / tmp.json
+CONFIG_PATH = "tmp.json"
+
 
 def objective(trial):
-    # tmp_config.json
-    args = json.load(open("tmp.json", 'r'))
+    args = json.load(open(CONFIG_PATH, 'r'))
     curr_id = str(uuid.uuid4())
     args["id"] = curr_id
     args["run_dir"] = f"data/journal_runs/{curr_id}/"
@@ -52,18 +57,22 @@ def main(args: dict) -> float:
 
     device = torch.device(args["device"])
 
-    dataloader_train, dataloader_val, dataloader_test = get_data_loaders(data_dir=args["data_dir"],
-                                                                         task=args["task"],
-                                                                         sequential=args["seq-model"] if "seq-model" in args else None,
-                                                                         bucket=args["bucket_embedding"] if "bucket_embedding" in args else None,
-                                                                         batch_size=args["batch_size"],
-                                                                         max_len=args["max_len"],
-                                                                         p_mlm=args["p_mlm"],
-                                                                         p_mask_max=args["p_mask_max"],
-                                                                         ignore_index=ignore_index,
-                                                                         num_workers=args["workers"] if "workers" in args else 1)
+    dataloader_train, dataloader_val, dataloader_test = \
+        get_data_loaders(data_dir=args["data_dir"],
+                         task=args["task"],
+                         sequential=args["seq-model"] if "seq-model" in args else None,
+                         bucket=args["bucket_embedding"] if "bucket_embedding" in args else None,
+                         batch_size=args["batch_size"],
+                         max_len=args["max_len"],
+                         p_mlm=args["p_mlm"],
+                         p_mask_max=args["p_mask_max"],
+                         ignore_index=ignore_index,
+                         num_workers=args["workers"] if "workers" in args else 1)
     model = get_model(args).to(device)
     criterion = torch.nn.CrossEntropyLoss(ignore_index=ignore_index).to(device)
+    if "wandb" not in args or args['wandb']:
+        wandb.init(project=f"cobert", entity="koopmann")
+        wandb.config = args
 
     if args["weight_decay"] > 0:
         optimizer = torch.optim.AdamW(model.parameters(), lr=args["learning_rate"], weight_decay=args["weight_decay"])
@@ -81,16 +90,28 @@ def main(args: dict) -> float:
         loss = train_one_epoch(model=model, dataloader=dataloader_train, criterion=criterion, optimizer=optimizer,
                                device=device, batch_size=args["batch_size"], effective_bs=args["effective_batch_size"],
                                clip_grad_norm=args["clip_grad_norm"], epoch=i)
+
+        if "wandb" not in args or args['wandb']:
+            wandb.log({"Loss/train": loss})
+
         logging.info(f"epoch {i} | train | loss={loss}")
 
         if i % args["validate_every_n"] != 0:
             continue
 
         loss = evaluate(model, dataloader_val, criterion, device, callbacks, i)
+        if "wandb" not in args or args['wandb']:
+            wandb.log({"Loss/val": loss})
         logging.info(f"epoch {i} | validate | loss={loss} {str(evaluation)}")
         ndcg_k = evaluation.evaluation["ndcg"][min_k]
         val_ndcg = evaluation.get_metric('ndcg')
         val_hit = evaluation.get_metric('hit')
+        if "wandb" not in args or args['wandb']:
+            for curr_k, score in val_ndcg:
+                wandb.log({f"NDCG/val@{curr_k}": score})
+            for curr_k, score in val_hit:
+                wandb.log({f"HIT/val@{curr_k}": score})
+
         evaluation.reset()
 
         # early stopping
@@ -128,10 +149,12 @@ def main(args: dict) -> float:
 
 
 if __name__ == '__main__':
-    args = json.load(open("tmp.json", 'r'))
+    args = json.load(open(CONFIG_PATH, 'r'))
     print("Args are:")
     for k, v in args.items():
         print(f"\t{k} \t- {v}")
+    if "debug" in args and args['debug']:
+        pydevd_pycharm.settrace('0.0.0.0', port=56789, stdoutToServer=True, stderrToServer=True)
     study = optuna.create_study(direction='minimize', study_name=args['study_name'],
                                 storage=f'sqlite:///{args["db_path"]}', load_if_exists=True)
-    study.optimize(objective, n_trials=10)
+    study.optimize(objective, n_trials=args['trials'])

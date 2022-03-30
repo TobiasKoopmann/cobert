@@ -17,37 +17,37 @@ from model.dataset import *
 
 def get_model(args: dict):
     config = args["data_dir"], args["hidden_size"], args["n_layers"], args["n_heads"], args["max_len"], args["dropout"]
-    if "og-model" in args:
+    if args["og-model"]:
         logging.info("load og model")
         model = get_og_model(*config)
-        assert "paper_embedding" not in args and "pretrained_paper_embedding" not in args, "OG model cannot use paper embedding"
-    elif "nova-model" in args:
+        assert not args["paper_embedding"] and not args["pretrained_paper_embedding"], "OG model cannot use paper embedding"
+    elif args["nova-model"]:
         logging.info("load nova model")
         model = get_nova_model(*config)
-    elif "seq-model" in args:
+    elif args["seq-model"]:
         logging.info("load sequential model")
         model = get_seq_model(*config)
-    elif not ("paper_embedding" in args or "pretrained_paper_embedding" in args) and not "weighted_embedding" in args:
+    elif not (args["paper_embedding"] or args["pretrained_paper_embedding"]) and not args["weighted_embedding"]:
         logging.info("load ae")
         model = get_ae_model(*config)
-    elif not ("paper_embedding" in args or "pretrained_paper_embedding" in args) and "weighted_embedding" in args:
+    elif not (args["paper_embedding"] or args["pretrained_paper_embedding"]) and args["weighted_embedding"]:
         logging.info("load awe model")
         model = get_aew_model(*config)
-    elif ("paper_embedding" in args or "pretrained_paper_embedding" in args) and "weighted_embedding" not in args:
+    elif (args["paper_embedding"] or args["pretrained_paper_embedding"]) and not args["weighted_embedding"]:
         logging.info("load cobert")
         model = get_aepe_model(*config)
-    elif ("paper_embedding" in args or "pretrained_paper_embedding" in args) and "weighted_embedding" in args:
+    elif (args["paper_embedding"] or args["pretrained_paper_embedding"]) and args["weighted_embedding"]:
         logging.info("load ae pe weighted")
         model = get_aepew_model(*config)
     else:
         raise ValueError("Invalid configuration")
 
-    if "pretrained_author_embedding" in args:
+    if args["pretrained_author_embedding"]:
         logging.info("load pretrained author embedding")
         authors_emb_file = _get_authors_emb_file(args["data_dir"])
         model.embedding.token.load_state_dict(authors_emb_file)
 
-    if "pretrained_paper_embedding" in args:
+    if args["pretrained_paper_embedding"]:
         logging.info("load pretrained paper embedding")
         papers_emb_file = _get_papers_emb_file(args["data_dir"])
         model.embedding.paper.load_state_dict(papers_emb_file)
@@ -201,30 +201,26 @@ def get_data_loaders(data_dir: str,
                      pad_id: int = 0,
                      mask_id: int = 1,
                      ignore_index: int = -100,
-                     num_workers: int = 1) -> [DataLoader, DataLoader, DataLoader]:
+                     num_workers: int = 1) -> Tuple[DataLoader, DataLoader, DataLoader]:
     data_train, data_val, data_test = _load_data_files(data_dir, task)
 
-    train_dataset, val_dataset, test_dataset = Bert4RecDatasetTrain, \
-                                               Bert4RecDatasetValidate, \
-                                               Bert4RecDatasetTest
-
-    dataset_train = train_dataset(data_train,
-                                  max_len=max_len,
-                                  p_mlm=p_mlm,
-                                  p_mask_max=p_mask_max,
-                                  pad_id=pad_id,
-                                  mask_id=mask_id,
-                                  ignore_index=ignore_index)
-    dataset_validate = val_dataset(data_val,
-                                   max_len=max_len,
-                                   pad_id=pad_id,
-                                   mask_id=mask_id,
-                                   ignore_index=ignore_index)
-    dataset_test = test_dataset(data_test,
-                                max_len=max_len,
-                                pad_id=pad_id,
-                                mask_id=mask_id,
-                                ignore_index=ignore_index)
+    dataset_train = Bert4RecDatasetTrain(data_train,
+                                         max_len=max_len,
+                                         p_mlm=p_mlm,
+                                         p_mask_max=p_mask_max,
+                                         pad_id=pad_id,
+                                         mask_id=mask_id,
+                                         ignore_index=ignore_index)
+    dataset_validate = Bert4RecDatasetValidate(data_val,
+                                               max_len=max_len,
+                                               pad_id=pad_id,
+                                               mask_id=mask_id,
+                                               ignore_index=ignore_index)
+    dataset_test = Bert4RecDatasetTest(data_test,
+                                       max_len=max_len,
+                                       pad_id=pad_id,
+                                       mask_id=mask_id,
+                                       ignore_index=ignore_index)
 
     if sequential:
         collate_fn = Bert4RecDataset.collate_seq
@@ -279,7 +275,7 @@ def _get_papers_emb_file(data_dir: str):
     return torch.load(papers_file)
 
 
-def _load_data_files(data_dir: str, task: Bert4RecTask) -> [list, list, list]:
+def _load_data_files(data_dir: str, task: Bert4RecTask) -> Tuple[list, list, list]:
     # todo put this into the dataset for sequential loading
     data_dir = os.path.abspath(data_dir)
     if task == Bert4RecTask.NEW:
@@ -304,3 +300,22 @@ def _load_data_files(data_dir: str, task: Bert4RecTask) -> [list, list, list]:
         data_test = [json.loads(x) for x in file]
 
     return data_train, data_val, data_test
+
+
+if __name__ == '__main__':
+    dataloader_train, dataloader_val, dataloader_test = \
+        get_data_loaders(data_dir=os.path.join("data", "files-n5-ai-temporal"),
+                         task=Bert4RecTask.EXISTING,
+                         sequential=False,
+                         bucket=True,
+                         batch_size=2,
+                         max_len=20,
+                         num_workers=1)
+    for name, dataloader in [("Train", dataloader_train), ("Val", dataloader_val), ("Test", dataloader_test)]:
+        print()
+        print(f"{name} ;)")
+        for i in dataloader:
+            for k, v in i.items():
+                print(f"{k}: {v.shape}, {v[-1]}")
+            break
+

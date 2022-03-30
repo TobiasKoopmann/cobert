@@ -4,7 +4,9 @@ import copy
 import random
 import tqdm
 import json
+import multiprocessing
 import numpy as np
+from functools import partial
 from collections import defaultdict
 
 from util.PaperEmbeddings import calculate_embeddings, init
@@ -26,8 +28,14 @@ def create_temporal_dataset(orig_path: str,
 
     save_to = os.path.join(out_dir, f"files-n{min_co_authors}-{dataset}")
 
+#    negative_samples = create_negative_samples(papers_by_author, authors)
+
     if not os.path.exists(save_to):
         os.makedirs(save_to)
+
+#     with open(os.path.join(save_to, "negative-samples.json"), "w") as file:
+#        json.dump(negative_samples, file)
+
     if create_embeddings:
         print("Creating Embeddings. ")
         create_author_and_paper_embeddings(papers_by_author=papers_by_author,
@@ -141,11 +149,11 @@ def create_test_train_data(papers_by_author: dict, authors: dict, embedding_dim:
             instance["masked_ids"] = []
             for paper in train_paper:
                 fixed_instance = copy.deepcopy(instance)
-                for co_author in paper['author']:
+                for i, co_author in enumerate(paper['author']):
                     if co_author in authors and author != co_author:
                         curr_instance = copy.deepcopy(fixed_instance)
                         is_existing = True if authors[co_author] in instance["co_authors"] else False
-                        curr_instance["masked_ids"].append(len(instance["co_authors"]))
+                        curr_instance["masked_ids"].append(i + len(train_filtered) - 1)
                         curr_instance["co_authors"].append(authors[co_author])
                         curr_instance["paper_ids"].append(paper_ids[paper["ss_id"]])
                         instance["co_authors"].append(authors[co_author])
@@ -219,10 +227,46 @@ def create_author_and_paper_embeddings(papers_by_author: dict, save_to: str,
     torch.save(author_embedding.state_dict(), os.path.join(save_to, f"author-embedding.pt"))
 
 
+# def create_negative_samples(dataset, authors, n_samples: int = 100):
+#     def get_author_distribution(dataset, normalize: bool = True):
+#         distribution = {}
+#         for instance in dataset:
+#             for author in instance["co_authors"]:
+#                 distribution.setdefault(author, 0)
+#                 distribution[author] += 1
+#
+#         if normalize:
+#             n_total = sum(distribution.values())
+#             return {k: v / n_total for k, v in distribution.items()}
+#         else:
+#             return distribution
+#
+#     def sample_negative(choices, probabilities, n, instance):
+#         samples = np.random.choice(choices, p=probabilities, size=n).tolist()
+#         for i in range(n):
+#             while samples[i] in instance["co_authors"]:
+#                 samples[i] = np.random.choice(choices, p=probabilities).item()
+#         return instance["author"], samples
+#
+#     authors_distribution = get_author_distribution(dataset)
+#     choices = list(authors_distribution.keys())
+#     probabilities = list(authors_distribution.values())
+#
+#     negative_samples = {}
+#
+#     map_func = partial(sample_negative, choices, probabilities, n_samples)
+#     with multiprocessing.Pool() as pool:
+#         for author, samples in tqdm.tqdm(pool.imap_unordered(map_func, dataset), total=len(dataset),
+#                                          desc="negative sampling"):
+#             author_id = authors[author]
+#             negative_samples[author_id] = samples
+#
+#     return negative_samples
+
+
 if __name__ == '__main__':
     # datasets are ai_dataset.json, ai_community_dataset.json
-    create_temporal_dataset(orig_path="./data/ai_dataset.json", dataset="ai-temporal", out_dir="./data",
-                            create_embeddings=True)
-    create_temporal_dataset(orig_path="./data/ai_community_dataset.json", dataset="ai-community-temporal", out_dir="./data",
-                            create_embeddings=True)
+    create_temporal_dataset(orig_path=os.path.join("data", "ai_dataset_test.json"), dataset="ai-temporal-test", out_dir="./data", create_embeddings=True)
+    # create_temporal_dataset(orig_path=os.path.join("data", "ai_dataset.json"), dataset="ai-temporal", out_dir="./data", create_embeddings=False)
+    # create_temporal_dataset(orig_path=os.path.join("data", "ai_community_dataset.json"), dataset="ai-community-temporal", out_dir="./data", create_embeddings=True)
     # create_temporal_dataset(orig_path="./data/medline.json", dataset="medline_temporal-n5", out_dir="./data", create_embeddings=True)

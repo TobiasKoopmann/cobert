@@ -1,0 +1,17 @@
+{
+    "sync-rsync.exclude": [
+        ".git",
+        ".vscode",
+        "__pycache__",
+        "venv",
+        "data/"
+    ],
+    "sync-rsync.onSave": true,
+    "sync-rsync.sites": [
+        {
+            "localPath": "/Users/tobiaskoopmann/PycharmProjects/cobert/",
+            "remotePath": "vingilot:/home/ls6/koopmann/cobert/",
+            "deleteFiles": true
+        }
+    ]
+}

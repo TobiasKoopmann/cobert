@@ -10,3 +10,5 @@ networkx
 gensim
 transformers
 optuna
+wandb
+debugpy

@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wandb
+  labels:
+    app: wandb
+  namespace: koopmann
+spec:
+  strategy:
+    type: RollingUpdate
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wandb
+  template:
+    metadata:
+      labels:
+        app: wandb
+    spec:
+      containers:
+        - image: ls6-staff-registry.informatik.uni-wuerzburg.de/koopmann/lsx-wandb:latest
+          imagePullPolicy: Always
+          name: wandb
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: "LICENSE"
+              value: eyJhbGciOiJSUzI1NiIsImtpZCI6InUzaHgyQjQyQWhEUXM1M0xQY09yNnZhaTdoSlduYnF1bTRZTlZWd1VwSWM9In0.eyJjb25jdXJyZW50QWdlbnRzIjoxLCJ0cmlhbCI6ZmFsc2UsIm1heFN0b3JhZ2VHYiI6MTAsIm1heFRlYW1zIjowLCJtYXhVc2VycyI6MSwiZXhwaXJlc0F0IjoiMjAyMy0wMi0yMlQwNzozNToyMS45NDNaIiwiZGVwbG95bWVudElkIjoiMjg1NDQ4NjMtMDBlYS00M2FlLWIxMTEtM2E5ZTlhNGJjMTY3IiwiZmxhZ3MiOltdLCJhY2Nlc3NLZXkiOiJjMTU5YTgyMy1mMTI2LTQ5NTktYmI4My05NjI1Mjg4MmZhMjciLCJzZWF0cyI6MSwidGVhbXMiOjAsInN0b3JhZ2VHaWdzIjoxMCwiZXhwIjoxNjc3MDUxMzIxfQ.UrTTm_eJyxKK8Ol6A3Dy7NsCJhDV3Rlk5k1kJsg2JJddpu1altFyMhv4JDlOCPrkOqBwz8YTA5l1ZOepr0zA-_kv4wDkIhqRBcTdMLqMzsOC3LwSbRLLD3f0XgkKZKtpCKyAB4VpY5ur41kRvPzK5ka_Zcx3NvsxV0e3TaqvJSCQeVoHzTaB5gCotImc8U0VygSNY5Z2FIP4fz6ZKx4RwfB5dHcmTaKV-RxLvw-FVzTjYSJWErZrLHQUgjqpEbeJggprIug0xxGhGS8TpK6rBP73ecWu2XyZOHRHd0bdUnS4H-QwTuLUnVebnOTwZuFYNcsfLBQZWxcEckg4_O9WFw
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+          resources:
+            limits:
+              cpu: "1"
+              memory: 4Gi
+            requests:
+              cpu: "1"
+              memory: 4Gi
+          volumeMounts:
+            - mountPath: "/vol"
+              name: home
+      restartPolicy: Always
+      imagePullSecrets:
+        - name: ls6-staff-registry
+      volumes:
+        - name: home
+          cephfs:
+            monitors:
+              - 132.187.14.16
+              - 132.187.14.17
+              - 132.187.14.19
+              - 132.187.14.20
+            user: koopmann
+            path: "/home/ls6/koopmann/code-2020-bert4coauthorrec/wandb"
+            secretRef:
+              name: ceph-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wandb-service
+  namespace: koopmann
+spec:
+  type: NodePort
+  selector:
+    app: wandb
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080

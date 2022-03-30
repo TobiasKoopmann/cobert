@@ -47,7 +47,7 @@ def get_mean_and_std(models: list, std: bool = True, get_top_5: bool = True) -> 
     return mean_calc
 
 
-def get_eval_dict(file_path: str = "data/runs/results.json",
+def get_eval_dict(file_path: str = "data/journal_runs/results.json",
                   sort_key: str = "val_hit",
                   data_dirs: list = ("data/files-n10", "data/files-n5"),
                   verbose: int = 1,
@@ -83,8 +83,8 @@ def get_eval_dict(file_path: str = "data/runs/results.json",
                 print("Having ", len(curr), "models. Baselines are ", curr_best_models.items())
             # other models
             for model_type in ["og-model", "bucket_embedding", "paper_embedding", "pretrained_author_embedding",
-                               "paper_author_embedding", "weighted_embedding", "seq-model"]:
-                if model_type == "seq-model":
+                               "paper_author_embedding", "weighted_embedding", "seq-model", "nova-model", "cobert-model"]:
+                if model_type == "seq-model" or model_type == "nova-model" or model_type == "cobert-model":
                     current = sorted([x for x in curr if model_type in x and x[model_type]],
                                      key=lambda x: x[sort_key][0][1], reverse=True)
                 elif model_type == "weighted_embedding":
@@ -111,7 +111,7 @@ def get_eval_dict(file_path: str = "data/runs/results.json",
                     current = sorted([x for x in curr if model_type in x and x[model_type] and not x["seq-model"]
                                       and not x["weighted_embedding"]], key=lambda x: x[sort_key][0][1], reverse=True)
                 if verbose:
-                    print(model_type.replace("_", " ").title() + " " + str(len(current)))
+                    print(f"{model_type.replace('_', ' ').title()}: {len(current)}")
                 if len(current) > 0:
                     if verbose:
                         print(print_mean(current[:5]))
@@ -185,9 +185,8 @@ if __name__ == '__main__':
     print_main = True
     print_ablation = False
     analyse_weights = False
-    eval_dict = get_eval_dict(data_dirs=["data/files-n5", "data/files-n10",
-                                         "data/files-n5-medline", "data/files-n10-medline"],
-                              verbose=not analyse_weights, std_dev=False)
+    eval_dict = get_eval_dict(file_path=os.path.join("data", "journal_runs", "results_new.json"),
+                              data_dirs=[os.path.join("data", "files-n5-ai-temporal")], verbose=True)
     if print_main:
         print_main_table(eval_dict=eval_dict)
     if print_ablation:

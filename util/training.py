@@ -3,6 +3,8 @@ from typing import Optional, Callable, Iterable
 import torch
 import tqdm
 
+import wandb
+
 
 def train_one_epoch(model: torch.nn.Module,
                     dataloader: torch.utils.data.DataLoader,
@@ -26,11 +28,10 @@ def train_one_epoch(model: torch.nn.Module,
                 continue
         logits = model(batch)
 
-        # logits = model(batch["author_ids"], batch["attention_masks"], batch["position_ids"], batch["paper_ids"])
-
         loss = criterion(logits.transpose(2, 1), batch["labels"])
+        wandb.log({"Loss/train per batch": loss})
         if i % backprop_every == 0:
-            model.zero_grad()
+            optimizer.zero_grad()
             loss.backward()
 
             if clip_grad_norm:
@@ -38,14 +39,15 @@ def train_one_epoch(model: torch.nn.Module,
 
             optimizer.step()
 
-            total_loss -= (total_loss / i) - (loss.item() / i)
+            # total_loss -= (total_loss / i) - (loss.item() / i)
+            total_loss += loss.item()
 
-            pbar_description = f"train | batch {i:d}/{len(dataloader)} | loss {total_loss:.2f}"
+            pbar_description = f"train | batch {i:d}/{len(dataloader)} | loss {total_loss / i:.2f}"
             if epoch:
                 pbar_description = f"epoch {epoch} | " + pbar_description
             pbar.set_description(pbar_description)
 
-    return total_loss
+    return total_loss / i
 
 
 def evaluate(model: torch.nn.Module,
@@ -68,7 +70,6 @@ def evaluate(model: torch.nn.Module,
                     continue
 
             logits = model(batch)
-            # logits = model(batch["author_ids"], batch["attention_masks"], batch["position_ids"], batch["paper_ids"])
 
             loss = criterion(logits.transpose(2, 1), batch["labels"])
 
