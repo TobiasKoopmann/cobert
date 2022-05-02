@@ -17,14 +17,14 @@ from model.dataset import *
 
 def get_model(args: dict):
     config = args["data_dir"], args["hidden_size"], args["n_layers"], args["n_heads"], args["max_len"], args["dropout"]
-    if args["og-model"]:
+    if args["og_model"]:
         logging.info("load og model")
         model = get_og_model(*config)
         assert not args["paper_embedding"] and not args["pretrained_paper_embedding"], "OG model cannot use paper embedding"
-    elif args["nova-model"]:
+    elif args["nova_model"]:
         logging.info("load nova model")
         model = get_nova_model(*config)
-    elif args["seq-model"]:
+    elif args["seq_model"]:
         logging.info("load sequential model")
         model = get_seq_model(*config)
     elif not (args["paper_embedding"] or args["pretrained_paper_embedding"]) and not args["weighted_embedding"]:
@@ -51,7 +51,20 @@ def get_model(args: dict):
         logging.info("load pretrained paper embedding")
         papers_emb_file = _get_papers_emb_file(args["data_dir"])
         model.embedding.paper.load_state_dict(papers_emb_file)
+    model = randomize_model(model)
+    return model
 
+
+def randomize_model(model):
+    for module_ in model.named_modules(): 
+        if isinstance(module_[1],(torch.nn.Linear)):
+            torch.nn.init.xavier_uniform(module_[1].weight)
+            # module_[1].weight.data.normal_(mean=0.0, std=0.02)
+        elif isinstance(module_[1], torch.nn.LayerNorm):
+            module_[1].bias.data.zero_()
+            module_[1].weight.data.fill_(1.0)
+        if isinstance(module_[1], torch.nn.Linear) and module_[1].bias is not None:
+            module_[1].bias.data.zero_()
     return model
 
 
@@ -306,7 +319,7 @@ if __name__ == '__main__':
     dataloader_train, dataloader_val, dataloader_test = \
         get_data_loaders(data_dir=os.path.join("data", "files-n5-ai-temporal"),
                          task=Bert4RecTask.EXISTING,
-                         sequential=False,
+                         sequential=True,
                          bucket=True,
                          batch_size=2,
                          max_len=20,

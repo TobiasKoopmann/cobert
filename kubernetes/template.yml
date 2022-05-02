@@ -1,19 +1,17 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: cobert-{{}}-[[]]
+  name: cobert-{{ model }}-{{ dataset }}-{{ task }}
 spec:
   backoffLimit: 0
   template:
     spec:
+#       nodeSelector:
+#         gputype: rtx8000
       priorityClassName: research-med
       containers:
-        - name: cobert-{{}}
-          image: ls6-staff-registry.informatik.uni-wuerzburg.de/koopmann/cobert-{{}}:latest
-          ports:
-            - name: http
-              containerPort: 56789
-              protocol: TCP
+        - name: cobert-{{ model }}
+          image: ls6-staff-registry.informatik.uni-wuerzburg.de/koopmann/cobert-{{ model }}:latest
           resources:
             limits:
               cpu: "2"
@@ -25,27 +23,27 @@ spec:
               memory: "32Gi"
           imagePullPolicy: "Always"
           volumeMounts:
-            - mountPath: "/workspace/data"
+            - mountPath: "/workspace"
               name: home
+              subPath: "cobert"
+          workingDir: /workspace/
           env:
-            - name: HOME
+            - name: PYTHONPATH
               value: "/workspace/"
+            - name: HOME
+              value: "/tmp"
             - name: WANDB_API_KEY
-              value: 4b411151e2c8d95f44c26848c68c6831d2503af4
-#               valueFrom:
-#                 secretKeyRef:
-#                   name: wandb
-#                   key: key
+              value: 1d2b0639eb5ed8f5e9126820528b5f570e997b94
             - name: WANDB_NAME
-              value: cobert-{{}}-[[]]
+              value: cobert-{{ model }}-{{ dataset }}-{{ task }}
             - name: WANDB_PROJECT
               value: COBERT
-#             - name: WANDB_TAGS
-#               value: "BART,darmstadt,half ds,post submission"
+            - name: WANDB_TAGS
+              value: "{{ tags }}"
 #             - name: WANDB_BASE_URL
 #                 value: "http://wandb-service:8080"
-          command: ["/bin/bash",  "-c", "python3 -m debugpy --listen 0.0.0.0:4444 --wait-for-client -u run.py"]
-#           command: ["/bin/bash",  "-c", "systemctl ssh start && sleep 1000000"]
+          command: ["/bin/bash",  "-c", "python3 -u -m debugpy --listen 0.0.0.0:4444 run.py {% for config in configs%} --{{config.key}} {% if config.value != 'True' %}{{config.value}}{% endif %}{% endfor %}"]
+#           command: ["/bin/bash",  "-c", "python3 -u run.py {% for config in configs%} --{{config.key}} {% if config.value != 'True' %}{{config.value}}{% endif %}{% endfor %}"]
       restartPolicy: Never
       imagePullSecrets:
         - name: ls6-staff-registry
@@ -58,6 +56,6 @@ spec:
               - 132.187.14.19
               - 132.187.14.20
             user: koopmann
-            path: "/home/ls6/koopmann/code-2020-bert4coauthorrec/data/"
+            path: "/home/ls6/koopmann/"
             secretRef:
               name: ceph-secret

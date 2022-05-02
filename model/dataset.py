@@ -1,3 +1,4 @@
+import numpy as np
 import os.path
 from functools import partial
 from typing import List, Tuple, Optional, Dict
@@ -264,10 +265,7 @@ class Bert4RecDatasetValidate(Bert4RecDataset):
         a = datapoint["co_authors"]
         y = [self.ignore_index] * len(a)
         p = datapoint["paper_ids"]
-        print(f"DEBUG: Masks: {datapoint['masked_ids']} - length: {len(a)}/{len(y)} for author {datapoint['author']}")
         for mask_idx in datapoint['masked_ids']:
-            if mask_idx > len(a) or mask_idx > len(y):
-                print(f"Error: Idx: {mask_idx} - length: {len(a)}/{len(y)} for author {datapoint['author']}")
             y[mask_idx] = a[mask_idx]
             a[mask_idx] = self.mask_id
 
@@ -282,7 +280,6 @@ class Bert4RecDatasetTest(Bert4RecDataset):
         a = datapoint["co_authors"]
         y = [self.ignore_index] * len(a)
         p = datapoint["paper_ids"]
-        print(f"DEBUG: Masks: {datapoint['masked_ids']} - length: {len(a)}/{len(y)} for author {datapoint['author']}")
         for mask_idx in datapoint['masked_ids']:
             if mask_idx > len(a) or mask_idx > len(y):
                 print(f"Error: Idx: {mask_idx} - length: {len(a)}/{len(y)} for author {datapoint['author']}")

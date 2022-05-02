@@ -12,3 +12,4 @@ transformers
 optuna
 wandb
 debugpy
+jinja2

@@ -14,7 +14,7 @@ class Attention(nn.Module):
         scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(query.size(-1))
 
         if mask is not None:
-            scores.permute(1, 2, 0, 3)[:, :, mask == 0] = -1e9
+            scores.permute(1, 2, 0, 3)[:, :, mask == 0] = -1e4
             # scores = scores.masked_fill(mask == 0, -1e9)
 
         p_attn = F.softmax(scores, dim=-1)

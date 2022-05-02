@@ -4,14 +4,17 @@
         ".vscode",
         "__pycache__",
         "venv",
-        "data/"
+        "data",
+        ".cache",
+        "wandb"
     ],
     "sync-rsync.onSave": true,
+    "sync-rsync.onSaveIndividual": true,
     "sync-rsync.sites": [
         {
             "localPath": "/Users/tobiaskoopmann/PycharmProjects/cobert/",
             "remotePath": "vingilot:/home/ls6/koopmann/cobert/",
-            "deleteFiles": true
+            "deleteFiles": true, 
         }
     ]
 }

@@ -14,11 +14,17 @@ class Callback(abc.ABC):
 
 
 class Evaluation(Callback):
-    def __init__(self, ks=(1, 5, 10), ignore_index: int = -100):
+    def __init__(self, ks=(1, 5, 10), ignore_index: int = -100, n_samples_file: str = None):
         super().__init__()
         self.ks = ks
         self.ignore_index = ignore_index
         self.evaluation = None
+        self.use_neg_sampling = False
+        if n_samples_file:
+            self.use_neg_sampling = True
+            with open(n_samples_file, "r") as file:
+                negative_samples = json.load(file)
+                self.negative_samples = {int(k): v for k, v in negative_samples.items()}
         self.reset()
 
     def __call__(self, predictions, labels):  # predictions: torch [batch, 50, 35115], labels: [batch, 50]
@@ -27,12 +33,25 @@ class Evaluation(Callback):
                 if labels[i, j] == self.ignore_index:  # [ignore, ignore, ..., mask]
                     continue
                 candidate = labels[i, j].item()  # integer
-                sample_predictions = predictions[i, j].tolist()
-                samples = np.arange(len(sample_predictions))
+                samples = self.negative_samples[candidate] + [candidate]
+                sample_predictions = predictions[i, j][samples].tolist()
                 ranked_samples = list(sorted(zip(samples, sample_predictions), key=lambda x: x[1], reverse=True))  # list of id, logit
                 self.evaluation["n"] += 1
                 rank = 0
                 for index, sample in enumerate(ranked_samples):
+                    if sample[0] == candidate:
+                        rank = index
+                        break
+                for k in self.ks:
+                    if rank < k:
+                        self.evaluation["sampled_ndcg"][k] += 1 / np.log2(rank + 2)
+                        self.evaluation["sampled_hit"][k] += 1
+                # Again without neg sampling
+                all_predictions = predictions[i, j].tolist()
+                all_samples = np.arange(len(all_predictions))
+                ranked_predictions = list(sorted(zip(all_samples, all_predictions), key=lambda x: x[1], reverse=True))
+                rank = 0
+                for index, sample in enumerate(ranked_predictions):
                     if sample[0] == candidate:
                         rank = index
                         break
@@ -43,11 +62,13 @@ class Evaluation(Callback):
 
     def __str__(self):
         return " ".join(
-            f"{key}@{k}={self.evaluation[key][k] / self.evaluation['n']:.5f}" for key in ("ndcg", "hit") for k in
+            f"{key}@{k}={self.evaluation[key][k] / self.evaluation['n']:.5f}" for key in ("sampled_ndcg", "sampled_hit", "ndcg", "hit") for k in
             self.evaluation[key])
 
     def reset(self):
-        self.evaluation = {"ndcg": {k: 0 for k in self.ks},
+        self.evaluation = {"sampled_ndcg": {k: 0 for k in self.ks},
+                           "sampled_hit": {k: 0 for k in self.ks},
+                           "ndcg": {k: 0 for k in self.ks},
                            "hit": {k: 0 for k in self.ks},
                            "n": 0}
 
